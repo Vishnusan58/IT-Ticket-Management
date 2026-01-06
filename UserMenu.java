@@ -49,7 +49,6 @@ public class UserMenu {
                 sc.nextLine(); // clear invalid input
             } catch (Exception e) {
                 System.out.println("Unexpected error occurred: " + e.getMessage());
-                e.printStackTrace();
             }
         }
     }

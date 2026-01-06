@@ -319,7 +319,7 @@ public class TicketDAO {
             rs.getString("category"),
             rs.getString("sub_category"),
             rs.getString("created_by"),
-            true  // Skip history creation since we're loading from DB
+            Ticket.SKIP_HISTORY_CREATION  // Skip history creation since we're loading from DB
         );
         
         ticket.id = rs.getInt("id");

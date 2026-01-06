@@ -114,7 +114,6 @@ public class TicketSystem {
                 if (ch == 1)
                     login();
                 else if (ch == 2) {
-                    DatabaseManager.closeConnection();
                     break;
                 }
                 else

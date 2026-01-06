@@ -5,7 +5,6 @@ import java.sql.*;
  */
 public class DatabaseManager {
     private static final String DB_URL = "jdbc:sqlite:ticket_system.db";
-    private static Connection connection;
 
     static {
         try {
@@ -98,20 +97,6 @@ public class DatabaseManager {
 
         } catch (SQLException e) {
             System.out.println("Error initializing database: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Close database connection
-     */
-    public static void closeConnection() {
-        try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-            }
-        } catch (SQLException e) {
-            System.out.println("Error closing database: " + e.getMessage());
         }
     }
 }

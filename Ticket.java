@@ -22,10 +22,14 @@ public class Ticket {
     public String changeType;              // raise / remove / renew
     public String changeStatus;             // pending / approved / rejected
 
+    // Constants for ticket creation
+    public static final boolean SKIP_HISTORY_CREATION = true;
+    public static final boolean SAVE_HISTORY_ON_CREATE = false;
+
     private boolean skipHistoryOnCreate = false;
 
     public Ticket(String title, String description, String category, String subCategory, String createdBy) {
-        this(title, description, category, subCategory, createdBy, false);
+        this(title, description, category, subCategory, createdBy, SAVE_HISTORY_ON_CREATE);
     }
 
     public Ticket(String title, String description, String category, String subCategory, String createdBy, boolean skipHistory) {
