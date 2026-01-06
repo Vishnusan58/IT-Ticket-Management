@@ -1,0 +1,5 @@
+*.class
+*.db
+test*.java
+test*.sh
+interactive_test.sh
