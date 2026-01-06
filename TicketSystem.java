@@ -6,69 +6,65 @@ import java.util.Scanner;
 // Core system
 public class TicketSystem {
 
-    public ArrayList<User> users = new ArrayList<>();
-    public ArrayList<Ticket> tickets = new ArrayList<>();
-    public ArrayList<ChangeRequest> changes = new ArrayList<>();
-    public ArrayList<ChangeRequest> changeRequests = new ArrayList<>();
-
     Scanner sc = new Scanner(System.in);
 
     public TicketSystem() {
 
         try {
-            // USERS WITH PASSWORD
-            User u1 = new User("U1", "123", "Manu", "user");
-            User u2 = new User("U2", "123", "Karthi", "user");
-            User a1 = new User("A1", "123", "Vishnu", "agent");
-            User a2 = new User("A2", "123", "Priya", "agent");
-            User ad1 = new User("AD1", "123", "Rishi", "admin");
+            // Initialize database
+            DatabaseManager.initializeDatabase();
 
-            users.add(u1);
-            users.add(u2);
-            users.add(a1);
-            users.add(a2);
-            users.add(ad1);
+            // Check if database is already populated
+            if (UserDAO.getAllUsers().isEmpty()) {
+                // USERS WITH PASSWORD
+                User u1 = new User("U1", "123", "Manu", "user");
+                User u2 = new User("U2", "123", "Karthi", "user");
+                User a1 = new User("A1", "123", "Vishnu", "agent");
+                User a2 = new User("A2", "123", "Priya", "agent");
+                User ad1 = new User("AD1", "123", "Rishi", "admin");
 
-            // EXISTING TICKETS
-            Ticket t1 = new Ticket("Email Issue", "Email not working", "IT", "Software", "U1");
-            t1.assignedTo = "A1";
-            t1.status = "in-progress";
-            t1.notes.add("Checking email server configuration - Vishnu");
-            tickets.add(t1);
-            u1.myTickets.add(t1);
+                UserDAO.insertUser(u1);
+                UserDAO.insertUser(u2);
+                UserDAO.insertUser(a1);
+                UserDAO.insertUser(a2);
+                UserDAO.insertUser(ad1);
 
-            Ticket t2 = new Ticket("Network Slow", "Internet is very slow", "IT", "Network", "U2");
-            t2.assignedTo = "A2";
-            t2.status = "open";
-            t2.notes.add("Will check network bandwidth - Priya");
-            tickets.add(t2);
-            u2.myTickets.add(t2);
+                // EXISTING TICKETS
+                Ticket t1 = new Ticket("Email Issue", "Email not working", "IT", "Software", "U1");
+                t1.assignedTo = "A1";
+                t1.status = "in-progress";
+                TicketDAO.insertTicket(t1);
+                TicketDAO.addNote(t1.id, "Checking email server configuration - Vishnu");
 
-            Ticket t3 = new Ticket("Mouse Broken", "Left click not working", "Hardware", "Peripherals", "U1");
-            t3.assignedTo = "A1";
-            t3.status = "resolved";
-            t3.resolvedDate = new Date();
-            t3.rating = 4;
-            t3.notes.add("Replaced with new mouse - Vishnu");
-            tickets.add(t3);
-            u1.myTickets.add(t3);
+                Ticket t2 = new Ticket("Network Slow", "Internet is very slow", "IT", "Network", "U2");
+                t2.assignedTo = "A2";
+                t2.status = "open";
+                TicketDAO.insertTicket(t2);
+                TicketDAO.addNote(t2.id, "Will check network bandwidth - Priya");
 
-            Ticket t4 = new Ticket("Payroll Error", "Salary mismatch", "HR", "Payroll", "U2");
-            t4.assignedTo = "A2";
-            t4.status = "open";
-            t4.notes.add("Forwarded to HR team for verification - Priya");
-            tickets.add(t4);
-            u2.myTickets.add(t4);
+                Ticket t3 = new Ticket("Mouse Broken", "Left click not working", "Hardware", "Peripherals", "U1");
+                t3.assignedTo = "A1";
+                t3.status = "resolved";
+                t3.resolvedDate = new Date();
+                t3.rating = 4;
+                TicketDAO.insertTicket(t3);
+                TicketDAO.addNote(t3.id, "Replaced with new mouse - Vishnu");
 
-            Ticket t5 = new Ticket("VPN Access", "Need VPN access", "IT", "Network", "U1");
-            t5.assignedTo = "A1";
-            t5.status = "waiting";
-            t5.notes.add("Waiting for manager approval document - Vishnu");
-            tickets.add(t5);
-            u1.myTickets.add(t5);
+                Ticket t4 = new Ticket("Payroll Error", "Salary mismatch", "HR", "Payroll", "U2");
+                t4.assignedTo = "A2";
+                t4.status = "open";
+                TicketDAO.insertTicket(t4);
+                TicketDAO.addNote(t4.id, "Forwarded to HR team for verification - Priya");
 
-            ChangeRequest cr1 = new ChangeRequest(101, "laptop", "renew", "U1");
-            changeRequests.add(cr1);
+                Ticket t5 = new Ticket("VPN Access", "Need VPN access", "IT", "Network", "U1");
+                t5.assignedTo = "A1";
+                t5.status = "waiting";
+                TicketDAO.insertTicket(t5);
+                TicketDAO.addNote(t5.id, "Waiting for manager approval document - Vishnu");
+
+                ChangeRequest cr1 = new ChangeRequest(101, "laptop", "renew", "U1");
+                ChangeRequestDAO.insertChangeRequest(cr1);
+            }
 
         } catch (Exception e) {
             System.out.println("Error while initializing system data: " + e.getMessage());
@@ -81,24 +77,13 @@ public class TicketSystem {
             String bestAgent = null;
             int minTickets = Integer.MAX_VALUE;
 
-            for (User u : users) {
-                if ("agent".equals(u.role)) {
-                    int count = 0;
+            ArrayList<User> agents = UserDAO.getUsersByRole("agent");
+            for (User u : agents) {
+                int count = TicketDAO.countActiveTicketsForAgent(u.id);
 
-                    for (Ticket ticket : tickets) {
-                        if (ticket.assignedTo != null
-                                && ticket.assignedTo.equals(u.id)
-                                && ticket.status != null
-                                && !ticket.status.equals("resolved")
-                                && !ticket.status.equals("closed")) {
-                            count++;
-                        }
-                    }
-
-                    if (count < minTickets) {
-                        minTickets = count;
-                        bestAgent = u.id;
-                    }
+                if (count < minTickets) {
+                    minTickets = count;
+                    bestAgent = u.id;
                 }
             }
 
@@ -128,8 +113,10 @@ public class TicketSystem {
 
                 if (ch == 1)
                     login();
-                else if (ch == 2)
+                else if (ch == 2) {
+                    DatabaseManager.closeConnection();
                     break;
+                }
                 else
                     System.out.println("Invalid choice!");
 
@@ -151,18 +138,17 @@ public class TicketSystem {
             System.out.print("Password: ");
             String pass = sc.nextLine();
 
-            for (User u : users) {
-                if (u.id.equals(id) && u.password.equals(pass)) {
-                    System.out.println("Welcome " + u.name);
+            User u = UserDAO.validateCredentials(id, pass);
+            if (u != null) {
+                System.out.println("Welcome " + u.name);
 
-                    if (u.role.equals("user"))
-                        new UserMenu(this, u).menu();
-                    else if (u.role.equals("agent"))
-                        new AgentMenu(this, u).menu();
-                    else
-                        new AdminMenu(this).menu();
-                    return;
-                }
+                if (u.role.equals("user"))
+                    new UserMenu(this, u).menu();
+                else if (u.role.equals("agent"))
+                    new AgentMenu(this, u).menu();
+                else
+                    new AdminMenu(this).menu();
+                return;
             }
 
             System.out.println("Invalid credentials!");

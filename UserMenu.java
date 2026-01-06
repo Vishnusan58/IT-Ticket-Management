@@ -1,4 +1,5 @@
 
+import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Scanner;
 
@@ -48,6 +49,7 @@ public class UserMenu {
                 sc.nextLine(); // clear invalid input
             } catch (Exception e) {
                 System.out.println("Unexpected error occurred: " + e.getMessage());
+                e.printStackTrace();
             }
         }
     }
@@ -99,8 +101,7 @@ public class UserMenu {
 
             Ticket t = new Ticket(title, desc, cat, subCat, user.id);
             system.assignTicket(t);
-            system.tickets.add(t);
-            user.myTickets.add(t);
+            TicketDAO.insertTicket(t);
 
             System.out.println("Ticket Created Successfully. Ticket ID: " + t.id);
 
@@ -115,10 +116,12 @@ public class UserMenu {
             int id = sc.nextInt();
             sc.nextLine();
 
-            for (Ticket t : user.myTickets) {
+            ArrayList<Ticket> myTickets = user.getMyTickets();
+            for (Ticket t : myTickets) {
                 if (t.id == id && t.status != null && !t.status.equalsIgnoreCase("resolved")) {
                     System.out.print("New Description: ");
                     t.description = sc.nextLine();
+                    TicketDAO.updateTicket(t);
                     System.out.println("Description updated successfully");
                     return;
                 }
@@ -137,12 +140,14 @@ public class UserMenu {
             int id = sc.nextInt();
             sc.nextLine();
 
-            for (Ticket t : user.myTickets) {
+            ArrayList<Ticket> myTickets = user.getMyTickets();
+            for (Ticket t : myTickets) {
                 if (t.id == id) {
-                    if (t.notes.isEmpty()) {
+                    ArrayList<String> notes = t.getNotes();
+                    if (notes.isEmpty()) {
                         System.out.println("No notes found for this ticket.");
                     } else {
-                        for (String note : t.notes) {
+                        for (String note : notes) {
                             System.out.println("- " + note);
                         }
                     }
@@ -160,7 +165,8 @@ public class UserMenu {
     private void viewTickets() {
         System.out.println("\n--- My Tickets ---");
         System.out.println("ID | Category | Status");
-        for (Ticket t : user.myTickets) {
+        ArrayList<Ticket> myTickets = user.getMyTickets();
+        for (Ticket t : myTickets) {
             System.out.println(t.id + " | " + t.category + " | " + t.status);
         }
     }
@@ -171,9 +177,11 @@ public class UserMenu {
             int id = sc.nextInt();
             sc.nextLine();
 
-            for (Ticket t : user.myTickets) {
+            ArrayList<Ticket> myTickets = user.getMyTickets();
+            for (Ticket t : myTickets) {
                 if (t.id == id && !t.escalated) {
                     t.escalated = true;
+                    TicketDAO.updateTicket(t);
                     System.out.println("Ticket escalated to admin");
                     return;
                 }
@@ -192,7 +200,8 @@ public class UserMenu {
             int id = sc.nextInt();
             sc.nextLine();
 
-            for (Ticket t : user.myTickets) {
+            ArrayList<Ticket> myTickets = user.getMyTickets();
+            for (Ticket t : myTickets) {
                 if (t.id == id) {
 
                     if (!"resolved".equalsIgnoreCase(t.status)) {
@@ -226,6 +235,7 @@ public class UserMenu {
                     }
 
                     t.rating = rating;
+                    TicketDAO.updateTicket(t);
                     System.out.println("Rating saved successfully!");
 
                     if (rating < 2) {
@@ -304,7 +314,7 @@ public class UserMenu {
 
             int id = new java.util.Random().nextInt(900) + 100;
             ChangeRequest cr = new ChangeRequest(id, asset, change, user.id);
-            system.changeRequests.add(cr);
+            ChangeRequestDAO.insertChangeRequest(cr);
 
             System.out.println("Change request raised successfully!");
 

@@ -16,18 +16,20 @@ public class Ticket {
     
     public Date createdDate;
     public Date resolvedDate;
-    
-    public ArrayList<TicketHistory> history;
-
 
     // CHANGE REQUEST FIELDS (NEW)
     public boolean changeRequest;          // raised or not
     public String changeType;              // raise / remove / renew
     public String changeStatus;             // pending / approved / rejected
 
-    public ArrayList<String> notes;
+    private boolean skipHistoryOnCreate = false;
 
     public Ticket(String title, String description, String category, String subCategory, String createdBy) {
+        this(title, description, category, subCategory, createdBy, false);
+    }
+
+    public Ticket(String title, String description, String category, String subCategory, String createdBy, boolean skipHistory) {
+        this.skipHistoryOnCreate = skipHistory;
         this.id = new java.util.Random().nextInt(9000) + 1000;
         this.title = title;
         this.description = description;
@@ -43,15 +45,35 @@ public class Ticket {
         this.changeRequest = false;
         this.changeStatus = "NA";
         
-        this.notes = new ArrayList<>();
-        this.history = new ArrayList<>();
-        
-        // Log creation
-        this.history.add(new TicketHistory(createdBy, "CREATED", "Ticket created"));
+        // Log creation in database only if not loading from DB
+        if (!skipHistory) {
+            addHistory(createdBy, "CREATED", "Ticket created");
+        }
     }
 
     public void addHistory(String actor, String action, String details) {
-        this.history.add(new TicketHistory(actor, action, details));
+        TicketHistory history = new TicketHistory(actor, action, details);
+        TicketDAO.addHistory(this.id, history);
     }
 
+    /**
+     * Get history from database
+     */
+    public ArrayList<TicketHistory> getHistory() {
+        return TicketDAO.getHistory(this.id);
+    }
+
+    /**
+     * Get notes from database
+     */
+    public ArrayList<String> getNotes() {
+        return TicketDAO.getNotes(this.id);
+    }
+
+    /**
+     * Add note to database
+     */
+    public void addNote(String note) {
+        TicketDAO.addNote(this.id, note);
+    }
 }

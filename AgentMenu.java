@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Scanner;
 
@@ -53,7 +54,8 @@ public class AgentMenu {
         System.out.println("ID | Title | Status | Tag");
 
         boolean found = false;
-        for (Ticket t : system.tickets) {
+        ArrayList<Ticket> tickets = TicketDAO.getAllTickets();
+        for (Ticket t : tickets) {
             if (t.assignedTo != null && agent.id.equals(t.assignedTo)) {
                 String tag = t.escalated ? "[ESCALATED]" : "";
                 System.out.println(t.id + " | " + t.title + " | " + t.status + " " + tag);
@@ -73,54 +75,54 @@ public class AgentMenu {
             int id = sc.nextInt();
             sc.nextLine();
 
-            for (Ticket t : system.tickets) {
-                if (t.id == id && agent.id.equals(t.assignedTo)) {
+            Ticket t = TicketDAO.getTicketById(id);
+            if (t != null && agent.id.equals(t.assignedTo)) {
 
-                    String newStatus = "";
-                    boolean validStatus = false;
+                String newStatus = "";
+                boolean validStatus = false;
 
-                    while (!validStatus) {
-                        try {
-                            System.out.println("Select new status:");
-                            System.out.println("1. in-progress");
-                            System.out.println("2. waiting");
-                            System.out.println("3. resolved");
-                            System.out.print("Enter choice (1/2/3): ");
+                while (!validStatus) {
+                    try {
+                        System.out.println("Select new status:");
+                        System.out.println("1. in-progress");
+                        System.out.println("2. waiting");
+                        System.out.println("3. resolved");
+                        System.out.print("Enter choice (1/2/3): ");
 
-                            int choice = sc.nextInt();
-                            sc.nextLine();
+                        int choice = sc.nextInt();
+                        sc.nextLine();
 
-                            if (choice == 1) newStatus = "in-progress";
-                            else if (choice == 2) newStatus = "waiting";
-                            else if (choice == 3) newStatus = "resolved";
-                            else {
-                                System.out.println("Invalid choice!");
-                                continue;
-                            }
-
-                            validStatus = true;
-
-                        } catch (InputMismatchException e) {
-                            System.out.println("Please enter a number!");
-                            sc.nextLine();
+                        if (choice == 1) newStatus = "in-progress";
+                        else if (choice == 2) newStatus = "waiting";
+                        else if (choice == 3) newStatus = "resolved";
+                        else {
+                            System.out.println("Invalid choice!");
+                            continue;
                         }
-                    }
 
-                    if ("waiting".equalsIgnoreCase(newStatus)) {
-                        System.out.print("Reason for waiting: ");
-                        String reason = sc.nextLine();
-                        t.addHistory(agent.id, "STATUS_CHANGE", "Waiting: " + reason);
-                    } else if ("resolved".equalsIgnoreCase(newStatus)) {
-                        t.resolvedDate = new java.util.Date();
-                        t.addHistory(agent.id, "RESOLVED", "Ticket resolved");
-                    } else {
-                        t.addHistory(agent.id, "STATUS_CHANGE", "Changed to " + newStatus);
-                    }
+                        validStatus = true;
 
-                    t.status = newStatus;
-                    System.out.println("Ticket status updated successfully");
-                    return;
+                    } catch (InputMismatchException e) {
+                        System.out.println("Please enter a number!");
+                        sc.nextLine();
+                    }
                 }
+
+                if ("waiting".equalsIgnoreCase(newStatus)) {
+                    System.out.print("Reason for waiting: ");
+                    String reason = sc.nextLine();
+                    t.addHistory(agent.id, "STATUS_CHANGE", "Waiting: " + reason);
+                } else if ("resolved".equalsIgnoreCase(newStatus)) {
+                    t.resolvedDate = new java.util.Date();
+                    t.addHistory(agent.id, "RESOLVED", "Ticket resolved");
+                } else {
+                    t.addHistory(agent.id, "STATUS_CHANGE", "Changed to " + newStatus);
+                }
+
+                t.status = newStatus;
+                TicketDAO.updateTicket(t);
+                System.out.println("Ticket status updated successfully");
+                return;
             }
 
             System.out.println("Ticket not found or not assigned to you");
@@ -138,13 +140,7 @@ public class AgentMenu {
             int id = sc.nextInt();
             sc.nextLine();
 
-            Ticket targetTicket = null;
-            for (Ticket t : system.tickets) {
-                if (t.id == id) {
-                    targetTicket = t;
-                    break;
-                }
-            }
+            Ticket targetTicket = TicketDAO.getTicketById(id);
 
             if (targetTicket == null) {
                 System.out.println("Ticket not found!");
@@ -152,10 +148,9 @@ public class AgentMenu {
             }
 
             System.out.println("\nAvailable Agents:");
-            for (User u : system.users) {
-                if ("agent".equals(u.role)) {
-                    System.out.println("- " + u.id + " (" + u.name + ")");
-                }
+            ArrayList<User> agents = UserDAO.getUsersByRole("agent");
+            for (User u : agents) {
+                System.out.println("- " + u.id + " (" + u.name + ")");
             }
 
             String newAgent = "";
@@ -165,8 +160,8 @@ public class AgentMenu {
                 System.out.print("Enter Agent ID: ");
                 newAgent = sc.nextLine();
 
-                for (User u : system.users) {
-                    if (u.id.equals(newAgent) && "agent".equals(u.role)) {
+                for (User u : agents) {
+                    if (u.id.equals(newAgent)) {
                         validAgent = true;
                         break;
                     }
@@ -179,6 +174,7 @@ public class AgentMenu {
 
             targetTicket.assignedTo = newAgent;
             targetTicket.addHistory(agent.id, "REASSIGNED", "Reassigned to " + newAgent);
+            TicketDAO.updateTicket(targetTicket);
             System.out.println("Ticket reassigned successfully");
 
         } catch (InputMismatchException e) {
@@ -227,11 +223,10 @@ public class AgentMenu {
             System.out.println("\n--- Search Results ---");
             boolean found = false;
 
-            for (Ticket t : system.tickets) {
-                if (t.status != null && t.status.equalsIgnoreCase(status)) {
-                    System.out.println(t.id + " | " + t.title + " | " + t.status);
-                    found = true;
-                }
+            ArrayList<Ticket> tickets = TicketDAO.getTicketsByStatus(status);
+            for (Ticket t : tickets) {
+                System.out.println(t.id + " | " + t.title + " | " + t.status);
+                found = true;
             }
 
             if (!found) {
@@ -249,13 +244,13 @@ public class AgentMenu {
             int id = sc.nextInt();
             sc.nextLine();
 
-            for (Ticket t : system.tickets) {
-                if (t.id == id && agent.id.equals(t.assignedTo)) {
-                    System.out.print("Note: ");
-                    t.notes.add(sc.nextLine());
-                    System.out.println("Note added successfully");
-                    return;
-                }
+            Ticket t = TicketDAO.getTicketById(id);
+            if (t != null && agent.id.equals(t.assignedTo)) {
+                System.out.print("Note: ");
+                String note = sc.nextLine();
+                t.addNote(note);
+                System.out.println("Note added successfully");
+                return;
             }
 
             System.out.println("Ticket not found or not assigned to you");

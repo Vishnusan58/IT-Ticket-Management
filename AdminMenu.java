@@ -1,4 +1,5 @@
 
+import java.util.ArrayList;
 import java.util.InputMismatchException;
 
 // Handles ADMIN role actions
@@ -50,7 +51,8 @@ public class AdminMenu {
         System.out.println("\n--- All Tickets ---");
         System.out.println("ID | Status | Agent | Title | Category");
 
-        for (Ticket t : system.tickets) {
+        ArrayList<Ticket> tickets = TicketDAO.getAllTickets();
+        for (Ticket t : tickets) {
             System.out.println(
                 t.id + " | " + t.status + " | " + t.assignedTo + " | " + t.title + " | " + t.category
             );
@@ -63,13 +65,12 @@ public class AdminMenu {
         System.out.println("ID | Title | Category | Assigned To");
 
         boolean found = false;
-        for (Ticket t : system.tickets) {
-            if (t.escalated) {
-                System.out.println(
-                    t.id + " | " + t.title + " | " + t.category + " | " + t.assignedTo
-                );
-                found = true;
-            }
+        ArrayList<Ticket> tickets = TicketDAO.getEscalatedTickets();
+        for (Ticket t : tickets) {
+            System.out.println(
+                t.id + " | " + t.title + " | " + t.category + " | " + t.assignedTo
+            );
+            found = true;
         }
 
         if (!found)
@@ -83,24 +84,16 @@ public class AdminMenu {
             int id = system.sc.nextInt();
             system.sc.nextLine();
 
-            Ticket targetTicket = null;
-            for (Ticket t : system.tickets) {
-                if (t.id == id && t.escalated) {
-                    targetTicket = t;
-                    break;
-                }
-            }
-
-            if (targetTicket == null) {
+            Ticket targetTicket = TicketDAO.getTicketById(id);
+            if (targetTicket == null || !targetTicket.escalated) {
                 System.out.println("Ticket not found or not escalated");
                 return;
             }
 
             System.out.println("\nAvailable Agents:");
-            for (User u : system.users) {
-                if ("agent".equals(u.role)) {
-                    System.out.println("- " + u.id + " (" + u.name + ")");
-                }
+            ArrayList<User> agents = UserDAO.getUsersByRole("agent");
+            for (User u : agents) {
+                System.out.println("- " + u.id + " (" + u.name + ")");
             }
 
             String agentId = "";
@@ -110,8 +103,8 @@ public class AdminMenu {
                 System.out.print("Enter Agent ID from above list: ");
                 agentId = system.sc.nextLine();
 
-                for (User u : system.users) {
-                    if (u.id.equals(agentId) && "agent".equals(u.role)) {
+                for (User u : agents) {
+                    if (u.id.equals(agentId)) {
                         validAgent = true;
                         break;
                     }
@@ -124,6 +117,7 @@ public class AdminMenu {
 
             targetTicket.assignedTo = agentId;
             targetTicket.status = "in-progress";
+            TicketDAO.updateTicket(targetTicket);
             System.out.println("Escalated ticket assigned to agent: " + agentId);
 
         } catch (InputMismatchException e) {
@@ -135,7 +129,8 @@ public class AdminMenu {
     private void report() {
         int resolved = 0;
 
-        for (Ticket t : system.tickets) {
+        ArrayList<Ticket> tickets = TicketDAO.getAllTickets();
+        for (Ticket t : tickets) {
             if (t.status != null &&
                 (t.status.equalsIgnoreCase("resolved") || t.status.equalsIgnoreCase("closed"))) {
                 resolved++;
@@ -148,7 +143,7 @@ public class AdminMenu {
         int count = 0;
 
         System.out.println("\n--- Agent Ratings ---");
-        for (Ticket t : system.tickets) {
+        for (Ticket t : tickets) {
             if (t.rating > 0) {
                 System.out.println(
                     "Ticket " + t.id + " (Agent " + t.assignedTo + "): " + t.rating + "/5"
@@ -167,7 +162,8 @@ public class AdminMenu {
         System.out.println("\n--- Change Requests ---");
         System.out.println("ID | Asset | Type | Status");
 
-        for (ChangeRequest cr : system.changeRequests) {
+        ArrayList<ChangeRequest> changeRequests = ChangeRequestDAO.getAllChangeRequests();
+        for (ChangeRequest cr : changeRequests) {
             System.out.println(
                 cr.id + " | " + cr.assetType + " | " + cr.changeType + " | " + cr.status
             );
@@ -181,71 +177,71 @@ public class AdminMenu {
             int id = system.sc.nextInt();
             system.sc.nextLine();
 
-            for (ChangeRequest cr : system.changeRequests) {
+            ChangeRequest cr = ChangeRequestDAO.getChangeRequestById(id);
 
-                if (cr.id == id && "pending".equals(cr.status)) {
+            if (cr != null && "pending".equals(cr.status)) {
 
-                    int choice = 0;
-                    boolean validChoice = false;
+                int choice = 0;
+                boolean validChoice = false;
 
-                    while (!validChoice) {
-                        try {
-                            System.out.println("Select action:");
-                            System.out.println("1. Approve Renewal");
-                            System.out.println("2. Send to Agent");
-                            System.out.print("Enter choice (1/2): ");
+                while (!validChoice) {
+                    try {
+                        System.out.println("Select action:");
+                        System.out.println("1. Approve Renewal");
+                        System.out.println("2. Send to Agent");
+                        System.out.print("Enter choice (1/2): ");
 
-                            choice = system.sc.nextInt();
-                            system.sc.nextLine();
+                        choice = system.sc.nextInt();
+                        system.sc.nextLine();
 
-                            if (choice == 1 || choice == 2) {
-                                validChoice = true;
-                            } else {
-                                System.out.println("Invalid choice!");
-                            }
-
-                        } catch (InputMismatchException e) {
-                            System.out.println("Enter number only!");
-                            system.sc.nextLine();
+                        if (choice == 1 || choice == 2) {
+                            validChoice = true;
+                        } else {
+                            System.out.println("Invalid choice!");
                         }
+
+                    } catch (InputMismatchException e) {
+                        System.out.println("Enter number only!");
+                        system.sc.nextLine();
                     }
-
-                    if (choice == 1) {
-                        cr.status = "approved";
-                        System.out.println("Change request approved");
-                    } else {
-                        System.out.println("\nAvailable Agents:");
-                        for (User u : system.users) {
-                            if ("agent".equals(u.role)) {
-                                System.out.println("- " + u.id + " (" + u.name + ")");
-                            }
-                        }
-
-                        String agentId = "";
-                        boolean validAgent = false;
-
-                        while (!validAgent) {
-                            System.out.print("Enter Agent ID: ");
-                            agentId = system.sc.nextLine();
-
-                            for (User u : system.users) {
-                                if (u.id.equals(agentId) && "agent".equals(u.role)) {
-                                    validAgent = true;
-                                    break;
-                                }
-                            }
-
-                            if (!validAgent) {
-                                System.out.println("Invalid Agent ID!");
-                            }
-                        }
-
-                        cr.assignedAgent = agentId;
-                        cr.status = "sent-to-agent";
-                        System.out.println("Sent to agent " + agentId + " for checking");
-                    }
-                    return;
                 }
+
+                if (choice == 1) {
+                    cr.status = "approved";
+                    ChangeRequestDAO.updateChangeRequest(cr);
+                    System.out.println("Change request approved");
+                } else {
+                    System.out.println("\nAvailable Agents:");
+                    ArrayList<User> agents = UserDAO.getUsersByRole("agent");
+                    for (User u : agents) {
+                        System.out.println("- " + u.id + " (" + u.name + ")");
+                    }
+
+                    String agentId = "";
+                    boolean validAgent = false;
+
+                    while (!validAgent) {
+                        System.out.print("Enter Agent ID: ");
+                        agentId = system.sc.nextLine();
+
+                        for (User u : agents) {
+                            if (u.id.equals(agentId)) {
+                                validAgent = true;
+                                break;
+                            }
+                        }
+
+                        if (!validAgent) {
+                            System.out.println("Invalid Agent ID!");
+                        }
+                    }
+
+                    cr.assignedAgent = agentId;
+                    cr.status = "sent-to-agent";
+                    ChangeRequestDAO.updateChangeRequest(cr);
+                    System.out.println("Sent to agent " + agentId + " for checking");
+                }
+                return;
             }
 
             System.out.println("Request not found or already handled");
